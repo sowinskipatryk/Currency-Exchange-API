@@ -24,7 +24,7 @@ class CurrencyList(generics.ListAPIView):
         if ordering is not None:
             queryset = queryset.order_by(ordering)
 
-        queryset = queryset.filter(datetime__equal=
+        queryset = queryset.filter(datetime=datetime)
 
         return queryset
 
