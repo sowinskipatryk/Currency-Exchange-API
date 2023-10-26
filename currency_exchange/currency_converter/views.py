@@ -12,6 +12,7 @@ class CurrencyList(generics.ListAPIView):
         queryset = super().get_queryset()
         code = self.request.query_params.get('code', None)
         name = self.request.query_params.get('name', None)
+        datetime = self.request.query_params.get('datetime', None)
         ordering = self.request.query_params.get('ordering', None)
 
         if name is not None:
@@ -22,6 +23,8 @@ class CurrencyList(generics.ListAPIView):
 
         if ordering is not None:
             queryset = queryset.order_by(ordering)
+
+        queryset = queryset.filter(datetime__equal=
 
         return queryset
 
