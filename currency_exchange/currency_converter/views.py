@@ -25,9 +25,6 @@ class CurrencyList(generics.ListAPIView):
         if ordering is not None:
             queryset = queryset.order_by(ordering)
 
-        if date_from is not None and date_to is not None:
-            queryset = queryset.filter(datetime__range=[date_from, date_to])
-
         return queryset
 
 
@@ -53,3 +50,19 @@ class ExchangeRateRetrieve(generics.RetrieveAPIView):
             response_data = {
                 'error': f"{self.kwargs['from_currency']}/{self.kwargs['to_currency']} currency pair does not exist in the database"}
             return Response(response_data, status=status.HTTP_404_NOT_FOUND)
+
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+
+        if start_date is not None and end_date is not None:
+            try:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d')
+                end_date = datetime.strptime(end_date, '%Y-%m-%d')
+                queryset = queryset.filter(datetime__range=(start_date, end_date))
+            except ValueError:
+                pass
+
+        return queryset
