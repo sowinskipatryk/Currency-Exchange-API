@@ -25,8 +25,8 @@ class Command(BaseCommand):
                     exchange_data = yf.Ticker(ticker)
                     rate = exchange_data.history(period="1d")["Close"].values[0]
 
-                    exchange_rate, created = ExchangeRate.objects.update_or_create(
+                    exchange_rate = ExchangeRate.objects.create(
                         from_currency=from_currency,
                         to_currency=to_currency,
-                        defaults={"rate": rate}
+                        rate=rate
                     )

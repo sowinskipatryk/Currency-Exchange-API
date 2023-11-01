@@ -2,6 +2,8 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 from currency_converter.models import Currency, ExchangeRate
+from datetime import datetime
+from django.utils import timezone
 
 
 class CurrencyExchangeAPITest(TestCase):
@@ -12,7 +14,11 @@ class CurrencyExchangeAPITest(TestCase):
 
         ExchangeRate.objects.create(from_currency=Currency.objects.get(code="EUR"),
                                     to_currency=Currency.objects.get(code="USD"),
-                                    rate='1.0600')
+                                    rate='1.0600', datetime="2023-11-01T08:20:00")
+
+        ExchangeRate.objects.create(from_currency=Currency.objects.get(code="EUR"),
+                                    to_currency=Currency.objects.get(code="USD"),
+                                    rate='1.0550', datetime="2023-11-01T08:32:00")
 
     def test_list_available_currencies(self):
         response = self.client.get('/currency/')
@@ -41,7 +47,8 @@ class CurrencyExchangeAPITest(TestCase):
     def test_get_exchange_rate(self):
         response = self.client.get('/currency/EUR/USD/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['rate'], '1.0600')
+        self.assertEqual(response.data[0]['rate'], '1.0600')
+        self.assertEqual(response.data[1]['rate'], '1.0550')
 
     def test_get_exchange_rate_nonexistent_pair(self):
         response = self.client.get('/currency/GBP/JPY/')

@@ -1,3 +1,4 @@
+from datetime import datetime
 from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import Currency, ExchangeRate
@@ -12,8 +13,6 @@ class CurrencyList(generics.ListAPIView):
         queryset = super().get_queryset()
         code = self.request.query_params.get('code', None)
         name = self.request.query_params.get('name', None)
-        date_from = self.request.query_params.get('date_from', None)
-        date_to = self.request.query_params.get('date_to', None)
         ordering = self.request.query_params.get('ordering', None)
 
         if name is not None:
@@ -32,37 +31,52 @@ class ExchangeRateRetrieve(generics.RetrieveAPIView):
     queryset = ExchangeRate.objects.all()
     serializer_class = ExchangeRateSerializer
 
-    def get_object(self):
+    def retrieve(self, request, *args, **kwargs):
         from_currency = self.kwargs.get('from_currency')
         to_currency = self.kwargs.get('to_currency')
-
-        try:
-            return self.queryset.get(from_currency__code=from_currency, to_currency__code=to_currency)
-        except ExchangeRate.DoesNotExist:
-            return None
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if instance is not None:
-            serializer = self.get_serializer(instance)
-            return Response(serializer.data)
-        else:
-            response_data = {
-                'error': f"{self.kwargs['from_currency']}/{self.kwargs['to_currency']} currency pair does not exist in the database"}
-            return Response(response_data, status=status.HTTP_404_NOT_FOUND)
-
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
 
-        if start_date is not None and end_date is not None:
-            try:
-                start_date = datetime.strptime(start_date, '%Y-%m-%d')
-                end_date = datetime.strptime(end_date, '%Y-%m-%d')
-                queryset = queryset.filter(datetime__range=(start_date, end_date))
-            except ValueError:
-                pass
+        # Check if the currency pair is invalid
+        if not ExchangeRate.objects.filter(from_currency__code=from_currency, to_currency__code=to_currency).exists():
+            response_data = {
+                'error': f"{from_currency}/{to_currency} currency pair does not exist in the database"
+            }
+            return Response(response_data, status=status.HTTP_404_NOT_FOUND)
 
-        return queryset
+        if start_date and end_date:
+            start_date = datetime.strptime(start_date, '%d-%m-%Y')
+            end_date = datetime.strptime(end_date, '%d-%m-%Y')
+            queryset = ExchangeRate.objects.filter(
+                from_currency__code=from_currency,
+                to_currency__code=to_currency,
+                datetime__range=(start_date, end_date)
+            )
+        elif start_date:
+            start_date = datetime.strptime(start_date, '%d-%m-%Y')
+            queryset = ExchangeRate.objects.filter(
+                from_currency__code=from_currency,
+                to_currency__code=to_currency,
+                datetime__gte=start_date
+            )
+
+        elif end_date:
+            end_date = datetime.strptime(end_date, '%d-%m-%Y')
+            queryset = ExchangeRate.objects.filter(
+                from_currency__code=from_currency,
+                to_currency__code=to_currency,
+                datetime__lte=end_date
+            )
+        else:
+            queryset = ExchangeRate.objects.filter(
+                from_currency__code=from_currency,
+                to_currency__code=to_currency)
+
+        if queryset.exists():
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        else:
+            response_data = {
+                'message': 'No results found for the given date range'
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
