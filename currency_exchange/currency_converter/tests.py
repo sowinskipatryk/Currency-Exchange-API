@@ -57,3 +57,26 @@ class CurrencyExchangeAPITest(TestCase):
     def test_get_exchange_rate_invalid_currency(self):
         response = self.client.get('/currency/EUR/INVALID/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_exchange_rates_in_date_range(self):
+        start_date = "01-11-2023"
+        end_date = "02-11-2023"
+
+        # Send a GET request to your API to retrieve exchange rates within the date range
+        response = self.client.get(f'/currency/EUR/USD/?start_date={start_date}&end_date={end_date}')
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn("1.0600", response.content.decode())
+        self.assertIn("1.0550", response.content.decode())
+
+    def test_exchange_rates_outside_date_range(self):
+        start_date = "02-11-2023"
+        end_date = "03-11-2023"
+
+        response = self.client.get(f'/currency/EUR/USD/?start_date={start_date}&end_date={end_date}')
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertNotIn("1.0600", response.content.decode())
+        self.assertNotIn("1.0550", response.content.decode())
